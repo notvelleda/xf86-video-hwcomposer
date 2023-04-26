@@ -86,10 +86,34 @@ void hwc_start_fake_surfaceflinger(ScrnInfoPtr pScrn) {
 	}
 }
 
+void read_file_into(const char* path, char *string, int string_length) {
+	FILE *file = fopen(path, "r");
+	int c = 0;
+	memset(string,0,string_length);
+	while (file != NULL && (c = fgetc(file)) != EOF && strlen(string) < string_length) {
+		string[strlen(string)] = c;
+	}
+	if (file) {
+		fclose(file);
+	}
+}
+
+bool string_match(const char* string, const char* match) {
+	return(strncmp(string, match, strlen(match)) == 0);
+}
+
 Bool hwc_hwcomposer_init(ScrnInfoPtr pScrn)
 {
 	HWCPtr hwc = HWCPTR(pScrn);
 	int err;
+	char device[10];
+	memset(device,0,sizeof(device));
+
+	read_file_into("/proc/device-tree/model", device, sizeof (device));
+	if (string_match(device, "MT6873") || string_match(device, "MT6771")) {
+        hwc->hwcVersion = HWC_DEVICE_API_VERSION_2_0;
+		return hwc_hwcomposer2_init(pScrn);
+	}
 
 	hwc_start_fake_surfaceflinger(pScrn);
 
