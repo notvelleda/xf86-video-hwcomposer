@@ -207,9 +207,19 @@ hwc_display_pre_init(ScrnInfoPtr pScrn)
         pScrn->virtualY = pScrn->display->virtualY;
     } else {
         /* Pick rotated HWComposer screen resolution */
-        pScrn->virtualX = hwc->hwcHeight;
-        pScrn->virtualY = hwc->hwcWidth;
-     }
+        switch (hwc->rotation) {
+            case HWC_ROTATE_NORMAL:
+            case HWC_ROTATE_UD:
+                pScrn->virtualX = hwc->hwcWidth;
+                pScrn->virtualY = hwc->hwcHeight;
+                break;
+            case HWC_ROTATE_CW:
+            case HWC_ROTATE_CCW:
+                pScrn->virtualX = hwc->hwcHeight;
+                pScrn->virtualY = hwc->hwcWidth;
+                break;
+        }
+    }
     pScrn->displayWidth = pScrn->virtualX;
 
     /* Construct a mode with the screen's initial dimensions */
