@@ -48,6 +48,12 @@
 #include "scrnintstr.h"
 #include "servermd.h"
 
+#include <stdio.h>
+#include <stdio_ext.h>
+#include <termios.h>
+#include <linux/kd.h>
+#include <sys/ioctl.h>
+
 /* Mandatory functions */
 static const OptionInfoRec *	AvailableOptions(int chipid, int busid);
 static void     Identify(int flags);
@@ -743,6 +749,7 @@ ScreenInit(SCREEN_INIT_ARGS_DECL)
     int ret;
     VisualPtr visual;
     void *pixels;
+    struct termios new_settings;
 
     /*
      * we need to get the ScrnInfoRec for this screen, so let's allocate
@@ -750,6 +757,26 @@ ScreenInit(SCREEN_INIT_ARGS_DECL)
      */
     pScrn = xf86ScreenToScrn(pScreen);
     hwc = HWCPTR(pScrn);
+
+    /* this takes care of VT switching without the X server's knowledge and
+     * properly displaying the console after the X server exits
+     */
+    ioctl(STDIN_FILENO, KDSETMODE, KD_GRAPHICS);
+
+    if (tcgetattr(STDIN_FILENO, &hwc->original_console_settings) != 0) {
+        return 0;
+    }
+
+    new_settings = hwc->original_console_settings;
+
+    /* this tells the terminal not to send signals to the process when CTRL+C
+     * or CTRL+Z are pressed
+     */
+    new_settings.c_lflag &= ~ISIG;
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &new_settings) != 0) {
+        return 0;
+    }
 
     /*
      * Reset visual list.
@@ -930,6 +957,9 @@ CloseScreen(CLOSE_SCREEN_ARGS_DECL)
 
     if (hwc->CursorInfo)
         xf86DestroyCursorInfoRec(hwc->CursorInfo);
+
+    tcsetattr(STDIN_FILENO, TCSADRAIN, &hwc->original_console_settings);
+    ioctl(STDIN_FILENO, KDSETMODE, KD_TEXT);
 
     pScrn->vtSema = FALSE;
     pScreen->CloseScreen = hwc->CloseScreen;

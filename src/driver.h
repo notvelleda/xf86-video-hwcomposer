@@ -25,6 +25,8 @@
 
 #include "compat-api.h"
 
+#include <termios.h>
+
 /* function prototypes */
 
 extern Bool SwitchMode(SWITCH_MODE_ARGS_DECL);
@@ -165,6 +167,8 @@ typedef struct HWCRec
     pthread_mutex_t rendererLock;
     pthread_mutex_t dirtyLock;
     pthread_cond_t dirtyCond;
+
+    struct termios original_console_settings;
 } HWCRec, *HWCPtr;
 
 /* The privates of the hwcomposer driver */
